@@ -2,46 +2,46 @@
     .SYNOPSIS
     Set and Remove ExchangeMailboxFolderPermissions with advanced options 
    
-   	Christian Reetz 
+       Christian Reetz 
     (Updated by Christian Reetz to support Exchange Server 2013/2016)
-	
-	THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE 
-	RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
-	
-	23.03.2016
-	
+       
+       THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE 
+       RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
+       
+       16.04.2018
+       
     .DESCRIPTION
 
     Set and Remove ExchangeMailboxFolderPermissions with different options
-	
-	PARAMETER Mailbox
+       
+    PARAMETER Mailbox
     Die Mailbox auf die Berechtigungsänderungen angewandt werden, bzw. für die ein Ordnerreport erzeugt werden soll. 
-	
-	PARAMETER User
-	Der zu berechtigende Nutzer. Username, E-Mail-Adresse, Identity
-	
-	PARAMETER LogFile
-	Pfad der Logdatei z.B. c:\temp\username.txt
-	
-	PARAMETER ReferenceUser
+    
+    PARAMETER User
+    Der zu berechtigende Nutzer. Username, E-Mail-Adresse, Identity
+    
+    PARAMETER LogFile
+    Pfad der Logdatei z.B. c:\temp\username.txt
+    
+    PARAMETER ReferenceUser
     Der Referenznutzer, welcher als Referenz für die Berechtigungsstruktur dient. Optional und relevant für –mode: addlikereferenceuser
-		
-	PARAMETER AccessRights
-	Das Zugriffsrechtslevel, welches gesetzt werden soll für alle Ordner. Optional und relevant für –mode: addallfolders und changerights
+             
+    PARAMETER AccessRights
+    Das Zugriffsrechtslevel, welches gesetzt werden soll für alle Ordner. Optional und relevant für –mode: addallfolders und changerights
     Folgende Level sind verfügbar:
 
-    PublishingEditor	Read, Write, Delete, Create subfolders
-    Editor			  Read, Write, Delete 
-    FolderVisible	   Show only the folder without content or other rights
-    Contributor		 Only create elements, no read, change or other rights
-    Owner			   fullaccess incl. manage rigths
-    Reviewer		    Read
-    Author			  Read, Write, Delete (only own elements)
-    PublishingAuthor	Read, Write, Delete (only own elements), Create subfolders
+    PublishingEditor Read, Write, Delete, Create subfolders
+    Editor                   Read, Write, Delete 
+    FolderVisible      Show only the folder without content or other rights
+    Contributor            Only create elements, no read, change or other rights
+    Owner                     fullaccess incl. manage rigths
+    Reviewer            Read
+    Author                   Read, Write, Delete (only own elements)
+    PublishingAuthor Read, Write, Delete (only own elements), Create subfolders
     NonEditAuthor       Read, Write (only own elements) 
     
-	PARAMETER mode
-	-mode: addlikereferenceuser
+    PARAMETER mode
+    -mode: addlikereferenceuser
     Hierbei wird eine vorhandene Berechtigungsstruktur, anhand eines Referenzbenutzers ermittelt und dann auf den –User (siehe Unten) angewandt  
     -mode: addallfolders
     Hier werden Berechtigungen auf alle Ordner und Unterordner für den –User (siehe Unten)  angewandt.
@@ -61,8 +61,11 @@
     PARAMETER targetrootfolder
     Mit diesem Parameter kann ein Ordner definieren, welcher ausschließlich (aller enthaltener Unterordner) für sämtliche Berechtigungsänderungen 
     verwendet wird.
+
+    PARAMETER $OnlyMailFolders
+    Mit diesem Parameter legt man fest, dass ausschließlich E-Mail-Ordner berechtigt werden
       
-	EXAMPLES
+       EXAMPLES
     .\Manage-MailboxFolderPermissions.ps1 -Mailbox User1 -User User2 -Mode removeallfolders -LogFile c:\temp\remove-User2.txt
                                                    
     .\Manage-MailboxFolderPermissions.ps1 -Mailbox User1 -User User2 -Mode addlikereferenceuser -ReferenceUser User3
@@ -78,58 +81,34 @@
     .\Manage-MailboxFolderPermissions.ps1 -Mailbox User1 -mode reportsendpermissions
                                                    
     .\Manage-MailboxFolderPermissions.ps1 -Mailbox User1 -mode report
+
+    .\Manage-MailboxFolderPermissions.ps1 -Mailbox User1 -User User2 -Mode addallfolders -OnlyMailFolders $true -accessrights editor
     #>
 
 Param (
-	[Parameter(Mandatory=$true)] $Mailbox,
-	[Parameter(Mandatory=$true)] $Mode,
+    [Parameter(Mandatory=$true)] $Mailbox,
+    [Parameter(Mandatory=$true)] $Mode,
     [Parameter(Mandatory=$false)] $User,
     [Parameter(Mandatory=$false)] $LogFile,
     [Parameter(Mandatory=$false)] $ReferenceUser,
     [Parameter(Mandatory=$false)] $AccessRights,
-    [Parameter(Mandatory=$false)] $targetrootfolder
+    [Parameter(Mandatory=$false)] $targetrootfolder,
+    [Parameter(Mandatory=$false)] $OnlyMailFolders
 )
 
 #Mailboxfolders which will be ignored...
-$exclusions = @("/Sync Issues", 
-                 "/Sync Issues/Conflicts", 
-                 "/Sync Issues/Local Failures", 
-                 "/Sync Issues/Server Failures", 
-                 "/Synchronisierungsprobleme/Serverfehler",
-                 "/Synchronisierungsprobleme/Lokale Fehler",
-                 "/Synchronisierungsprobleme/Konflikte",
-                 "/Synchronisierungsprobleme",
-                 "/Kontakte/GAL Contacts",
-                 "/Kontakte/Recipient Cache",
-                 "/Kontakte/Skype for Business-Kontakte",
-                 "/Kontakte/{",
-                 "/Contacts/GAL Contacts",
-                 "/Contacts/Recipient Cache",
-                 "/Contacts/Skype for Business-Kontakte",
-                 "/Contacts/{*", #doesn't work
-                 "/Einstellungen für QuickSteps",
-                 "/Conversation Action Settings",
-                 "/Aufgezeichnete Unterhaltungen",
-                 "/Journal", #allways englisch
-                 "/Calendar Logging", #allways englisch
-                 "/Junk-E-Mail", #allways englisch
-                 "/Deletions", #allways englisch
-                 "/Purges",  #allways englisch
-                 "/Versions", #allways englisch
-                 "/Recoverable Items", #allways englisch
-                 "/Working Set", #allways englisch
-                 "/Verschlüsselt" #Customized Folder
+$exclusions = @("/Verschlüsselt" #Customized Folder
                  "/Ordner/Verschlüsselt" #Customized Folder
                  )
 
 if (!($user))
 {
-    $user = "*"
+$user = "*"
 }
 
 if (($user -eq "*") -and ($Mode -ne "report"))
 {
-    $user = Read-Host "define targetuser (f.E. -user User1)?"
+$user = Read-Host "define targetuser (f.E. -user User1)?"
 }
 
 function seterrordatared{
@@ -158,8 +137,43 @@ if ($targetrootfolder)
 }
 else
 {
-    $mailboxfolders = @(Get-MailboxFolderStatistics "$Mailboxalias" | Where {!($exclusions -icontains $_.FolderPath)} | Select FolderId, FolderPath)
+    $mailboxfolders = @(Get-MailboxFolderStatistics "$Mailboxalias" | Where {!($exclusions -icontains $_.FolderPath) -and `
+    ($_.FolderType -ne "ConversationActions") -and  `
+    ($_.FolderType -ne "CommunicatorHistory") -and  `
+    ($_.FolderType -ne "Drafts") -and  `
+    ($_.FolderType -ne "Journal") -and  `
+    ($_.FolderType -ne "JunkEmail") -and  `
+    ($_.FolderType -ne "ImContactList") -and  `
+    ($_.FolderType -ne "GalContacts") -and  `
+    ($_.FolderType -ne "RecipientCache") -and  `
+    ($_.FolderType -ne "QuickContacts") -and  `
+    ($_.FolderType -ne "Notes") -and  `
+    ($_.FolderType -ne "Outbox") -and  `
+    ($_.FolderType -ne "SyncIssues") -and  `
+    ($_.FolderType -ne "Conflicts") -and  `
+    ($_.FolderType -ne "LocalFailures") -and  `
+    ($_.FolderType -ne "ServerFailures") -and  `
+    ($_.FolderType -ne "WorkingSet") -and  `
+    ($_.FolderType -ne "RecoverableItemsRoot") -and  `
+    ($_.FolderType -ne "Audits") -and  `
+    ($_.FolderType -ne "CalendarLogging") -and  `
+    ($_.FolderType -ne "RecoverableItemsDeletions") -and  `
+    ($_.FolderType -ne "RecoverableItemsPurges") -and  `
+    ($_.FolderType -ne "RecoverableItemsVersions")  `
+    } | Select FolderId, FolderPath, FolderType)
+
+    if ($OnlyMailFolders)
+    {
+        $mailboxfolders = $mailboxfolders |  ? { ($_.FolderType -ne "Tasks") -and `
+        ($_.FolderType -ne "Calendar") -and `
+        ($_.FolderPath -notlike "*/Calendar/*") -and `
+        ($_.FolderPath -notlike "*/Kalender/*") -and `
+        ($_.FolderType -ne "Contacts") }
+    }
 }
+
+
+
 
 $nl = $([System.Environment]::NewLine)
 
@@ -170,8 +184,8 @@ if (-not ($LogFile))
 $loggingenable = Read-Host "enable logging for changes? (y/n)"
     if (($loggingenable -like "yes") -or ($loggingenable -like "y") -or ($loggingenable -like "j") -or ($loggingenable -eq "like") -or ($logging -eq "z"))
     {
-        Write-Host $nl
-        $logFile = Read-Host "specifie logging-path (f.E.: c:\temp\rightschanges_user1_20151101.log)"
+    Write-Host $nl
+    $logFile = Read-Host "specifie logging-path (f.E.: c:\temp\rightschanges_user1_20151101.log)"
     }
 }
 
@@ -183,7 +197,7 @@ if ($mode -eq "addlikereferenceuser")
     {}
     else
     {
-        $referenceuser = Read-Host "Specified an reference user, to copy permissions"
+    $referenceuser = Read-Host "Specified an reference user, to copy permissions"
     }
     
     seterrordatadarkcyan
@@ -197,7 +211,7 @@ if ($mode -eq "addallfolders")
     {}
     else
     {
-        $accessrights = Read-Host "Specified the rights-level (f.e. PublishingEditor)"
+    $accessrights = Read-Host "Specified the rights-level (f.e. PublishingEditor)"
     }
     
     $log = "Set permissions $accessrights on all folders for user $user in mailbox $mailbox" + $nl 
@@ -231,7 +245,7 @@ if ($mode -eq "changerights")
         {}
         else
         {
-            $accessrights = Read-Host "Specified the rights-level (f.e. PublishingEditor)"
+        $accessrights = Read-Host "Specified the rights-level (f.e. PublishingEditor)"
         }
     seterrordatadarkcyan
     $log = "Change rights in Mailbox " + $mailbox + " for User " + $user + $nl 
@@ -286,10 +300,19 @@ foreach ($mailboxfolder in $mailboxfolders)
             
                  if ($folderwithpermission)
                  {
-                 Remove-MailboxFolderPermission -Identity $identity -User $User -Confirm:$false -ErrorAction STOP
-                 Add-MailboxFolderPermission -Identity $identity -User $User -Confirm:$false -AccessRights $AccessRights -ErrorAction STOP
-                 Write-Host -ForegroundColor Green "done!"
-                 $log += "Change-Rights: $AccessRights from $($folderwithpermission.AccessRights)!" + $nl
+                    Remove-MailboxFolderPermission -Identity $identity -User $User -Confirm:$false -ErrorAction STOP
+                    
+                    if ($mailboxfolder.foldertype -eq "Root")
+                    {
+                       Add-MailboxFolderPermission -Identity "$identity" -User $User -Confirm:$false -AccessRights FolderVisible -ErrorAction STOP
+                    }
+                    else
+                    {
+                       Add-MailboxFolderPermission -Identity "$identity" -User $User -Confirm:$false -AccessRights $AccessRights -ErrorAction STOP
+                    }
+                    
+                    Write-Host -ForegroundColor Green "done!"
+                    $log += "Change-Rights: $AccessRights from $($folderwithpermission.AccessRights)!" + $nl
                  }
             }
             catch
@@ -312,7 +335,7 @@ foreach ($mailboxfolder in $mailboxfolders)
                     Remove-MailboxFolderPermission -Identity $identity -User $User -Confirm:$false -ErrorAction STOP
                     if ($mode -eq "removeallfolders")
                     {
-                        Write-Host -ForegroundColor Green "Removed!"
+                    Write-Host -ForegroundColor Green "Removed!"
                     }
                     $log += "Removed!" + $nl
                 }
@@ -336,7 +359,7 @@ foreach ($mailboxfolder in $mailboxfolders)
                     Remove-MailboxFolderPermission -Identity $identity -User $User -Confirm:$false -ErrorAction STOP
                     if ($mode -eq "removeallfolders")
                     {
-                        Write-Host -ForegroundColor Green "Removed!"
+                    Write-Host -ForegroundColor Green "Removed!"
                     }
                     $log += "Removed!" + $nl
                 }
@@ -349,7 +372,15 @@ foreach ($mailboxfolder in $mailboxfolders)
 
             try
             {
-                Add-MailboxFolderPermission -Identity $identity -User $User -Confirm:$false -AccessRights $AccessRights -ErrorAction STOP
+                if ($mailboxfolder.foldertype -eq "Root")
+                {
+                   Add-MailboxFolderPermission -Identity "$identity" -User $User -Confirm:$false -AccessRights FolderVisible -ErrorAction STOP
+                }
+                else
+                {
+                   Add-MailboxFolderPermission -Identity "$identity" -User $User -Confirm:$false -AccessRights $AccessRights -ErrorAction STOP
+                }
+
                 Write-Host -ForegroundColor Green "done!"
                 $log += "Add-Rights!" + $nl
             }
@@ -366,12 +397,12 @@ foreach ($mailboxfolder in $mailboxfolders)
     {
             if (($user -eq "*") -or ($user -eq "$false"))
             {
-                $permissions = Get-MailboxFolderPermission -Identity $identity | select name, user, AccessRights
+            $permissions = Get-MailboxFolderPermission -Identity $identity | select name, user, AccessRights
             }
             if ($user -ne "*" -and ($user))
             {
-                seterrordatadarkcyan
-                $permissions = Get-MailboxFolderPermission -Identity $identity -User $user | select name, user, AccessRights 
+            seterrordatadarkcyan
+            $permissions = Get-MailboxFolderPermission -Identity $identity -User $user | select name, user, AccessRights 
             }
             $useraccess = "$($permissions.user)"
             $accesslevel = "$($permissions.AccessRights)" 
@@ -425,7 +456,8 @@ foreach ($mailboxfolder in $mailboxfolders)
 #### Log-File generation ##############################################################################################################################
 
 if ($LogFile){
-    $log > $LogFile
+$log >> $LogFile
 }
 
-seterrordatared
+seterrordatared 
+
