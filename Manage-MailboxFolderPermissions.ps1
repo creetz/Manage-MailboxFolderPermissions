@@ -2,46 +2,46 @@
     .SYNOPSIS
     Set and Remove ExchangeMailboxFolderPermissions with advanced options 
    
-       Christian Reetz 
+   	Christian Reetz 
     (Updated by Christian Reetz to support Exchange Server 2013/2016)
-       
-       THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE 
-       RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
-       
-       16.04.2018
-       
+	
+	THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE 
+	RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
+	
+	07.11.2018
+	
     .DESCRIPTION
 
     Set and Remove ExchangeMailboxFolderPermissions with different options
-       
-    PARAMETER Mailbox
+	
+	PARAMETER Mailbox
     Die Mailbox auf die Berechtigungsänderungen angewandt werden, bzw. für die ein Ordnerreport erzeugt werden soll. 
-    
-    PARAMETER User
-    Der zu berechtigende Nutzer. Username, E-Mail-Adresse, Identity
-    
-    PARAMETER LogFile
-    Pfad der Logdatei z.B. c:\temp\username.txt
-    
-    PARAMETER ReferenceUser
+	
+	PARAMETER User
+	Der zu berechtigende Nutzer. Username, E-Mail-Adresse, Identity
+	
+	PARAMETER LogFile
+	Pfad der Logdatei z.B. c:\temp\username.txt
+	
+	PARAMETER ReferenceUser
     Der Referenznutzer, welcher als Referenz für die Berechtigungsstruktur dient. Optional und relevant für –mode: addlikereferenceuser
-             
-    PARAMETER AccessRights
-    Das Zugriffsrechtslevel, welches gesetzt werden soll für alle Ordner. Optional und relevant für –mode: addallfolders und changerights
+		
+	PARAMETER AccessRights
+	Das Zugriffsrechtslevel, welches gesetzt werden soll für alle Ordner. Optional und relevant für –mode: addallfolders und changerights
     Folgende Level sind verfügbar:
 
-    PublishingEditor Read, Write, Delete, Create subfolders
-    Editor                   Read, Write, Delete 
-    FolderVisible      Show only the folder without content or other rights
-    Contributor            Only create elements, no read, change or other rights
-    Owner                     fullaccess incl. manage rigths
-    Reviewer            Read
-    Author                   Read, Write, Delete (only own elements)
-    PublishingAuthor Read, Write, Delete (only own elements), Create subfolders
+    PublishingEditor	Read, Write, Delete, Create subfolders
+    Editor			  Read, Write, Delete 
+    FolderVisible	   Show only the folder without content or other rights
+    Contributor		 Only create elements, no read, change or other rights
+    Owner			   fullaccess incl. manage rigths
+    Reviewer		    Read
+    Author			  Read, Write, Delete (only own elements)
+    PublishingAuthor	Read, Write, Delete (only own elements), Create subfolders
     NonEditAuthor       Read, Write (only own elements) 
     
-    PARAMETER mode
-    -mode: addlikereferenceuser
+	PARAMETER mode
+	-mode: addlikereferenceuser
     Hierbei wird eine vorhandene Berechtigungsstruktur, anhand eines Referenzbenutzers ermittelt und dann auf den –User (siehe Unten) angewandt  
     -mode: addallfolders
     Hier werden Berechtigungen auf alle Ordner und Unterordner für den –User (siehe Unten)  angewandt.
@@ -65,7 +65,7 @@
     PARAMETER $OnlyMailFolders
     Mit diesem Parameter legt man fest, dass ausschließlich E-Mail-Ordner berechtigt werden
       
-       EXAMPLES
+	EXAMPLES
     .\Manage-MailboxFolderPermissions.ps1 -Mailbox User1 -User User2 -Mode removeallfolders -LogFile c:\temp\remove-User2.txt
                                                    
     .\Manage-MailboxFolderPermissions.ps1 -Mailbox User1 -User User2 -Mode addlikereferenceuser -ReferenceUser User3
@@ -86,8 +86,8 @@
     #>
 
 Param (
-    [Parameter(Mandatory=$true)] $Mailbox,
-    [Parameter(Mandatory=$true)] $Mode,
+	[Parameter(Mandatory=$true)] $Mailbox,
+	[Parameter(Mandatory=$true)] $Mode,
     [Parameter(Mandatory=$false)] $User,
     [Parameter(Mandatory=$false)] $LogFile,
     [Parameter(Mandatory=$false)] $ReferenceUser,
@@ -145,6 +145,16 @@ else
     ($_.FolderType -ne "JunkEmail") -and  `
     ($_.FolderType -ne "ImContactList") -and  `
     ($_.FolderType -ne "GalContacts") -and  `
+    ($_.FolderType -ne "ExternalContacts") -and  `
+    ($_.FolderType -ne "ImContactList") -and  `
+    ($_.FolderType -ne "CompanyContacts") -and  `   
+    ($_.FolderType -ne "OrganizationalContacts") -and  `
+    ($_.FolderType -ne "PeopleCentricConversationBuddies") -and  `
+    ($_.FolderType -ne "RssSubscription") -and  `
+    ($_.FolderType -ne "YammerRoot") -and  `        
+    ($_.FolderType -ne "YammerFeeds") -and  `
+    ($_.FolderType -ne "YammerInbound") -and  `
+    ($_.FolderType -ne "YammerOutbound") -and  `
     ($_.FolderType -ne "RecipientCache") -and  `
     ($_.FolderType -ne "QuickContacts") -and  `
     ($_.FolderType -ne "Notes") -and  `
@@ -171,9 +181,6 @@ else
         ($_.FolderType -ne "Contacts") }
     }
 }
-
-
-
 
 $nl = $([System.Environment]::NewLine)
 
@@ -459,5 +466,4 @@ if ($LogFile){
 $log >> $LogFile
 }
 
-seterrordatared 
-
+seterrordatared
